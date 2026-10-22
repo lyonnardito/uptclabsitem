@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="es" class="dark scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Sistema de Gestión de Turnos de Laboratorios de Sistemas</title>
+    <meta name="description" content="Sistema web transaccional mobile-first para gestión y reserva de turnos en laboratorios de sistemas, con Supabase, PostgreSQL y Tailwind CSS." />
+    <meta property="og:title" content="Sistema de Gestión de Turnos de Laboratorios de Sistemas" />
+    <meta property="og:description" content="Sistema web transaccional mobile-first para gestión y reserva de turnos en laboratorios de sistemas, con Supabase, PostgreSQL y Tailwind CSS." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                850: '#0f172a',
+                900: '#090d16',
+                950: '#030712',
+              },
+              emerald: {
+                400: '#34d399',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Supabase JS SDK via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+      /* Custom fine-tuned styling */
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #030712;
+      }
+      .glow-emerald {
+        box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+      }
+      .glow-emerald-sm {
+        box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3);
+      }
+      /* Custom scrollbars */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #10b981;
+      }
+      @keyframes pulseGlow {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      .animate-pulse-glow {
+        animation: pulseGlow 2.5s infinite ease-in-out;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+    
+    <!-- Barra Superior / Header de Navegación Mobile-First -->
+    <header class="sticky top-0 z-40 w-full backdrop-blur-md bg-slate-950/80 border-b border-slate-800/80 transition-all">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <!-- Logo & Identidad -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
+            <svg class="w-6 h-6 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-base sm:text-lg font-bold tracking-tight text-white">LabSistemas</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">PostgreSQL</span>
+            </div>
+            <p class="text-xs text-slate-400 hidden xs:block">Gestión de Turnos y Laboratorios</p>
+          </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Botón Ver DDL SQL -->
+          <button id="btn-open-ddl" type="button" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 transition">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+            <span class="hidden sm:inline">Script DDL</span>
+          </button>
+
+          <!-- Botón Configurar Supabase -->
+          <button id="btn-open-config" type="button" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 transition">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="hidden md:inline">Supabase</span>
+          </button>
+
+          <!-- Indicador de Estado Conexión -->
+          <div id="status-pill" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="status-text" class="text-[11px]">En Línea</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
+      
+      <!-- Hero Informativo Mobile-First -->
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 p-6 sm:p-8 lg:p-10 shadow-2xl">
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-emerald-600/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-medium mb-4">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>Semestre Académico 2026 - Turnos Abiertos</span>
+          </div>
+          <h1 class="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            Reserva de Turnos para <br />
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-200">
+              Laboratorios de Sistemas
+            </span>
+          </h1>
+          <p class="mt-3 sm:mt-4 text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl">
+            Reserva tus puestos en los laboratorios de cómputo para prácticas de redes, arquitectura, ciberseguridad y desarrollo de software. Transacciones registradas en tiempo real en PostgreSQL mediante Supabase.
+          </p>
+
+          <!-- Badges de características -->
+          <div class="mt-6 flex flex-wrap gap-2 sm:gap-3 text-xs text-slate-300">
+            <div class="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Código Estudiantil 9 dígitos</span>
+            </div>
+            <div class="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Horarios Bloque de 90 min</span>
+            </div>
+            <div class="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Validación Inmediata en DOM</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alertas Globales Dinámicas en el DOM (¡Sin alert()!) -->
+      <div id="global-alert-container" class="space-y-3" role="region" aria-live="polite"></div>
+
+      <!-- Cuadrícula Principal: Formulario de Reserva + Lista de Turnos en Tiempo Real -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- COLUMNA 1: FORMULARIO DE RESERVA (6 o 7 cols en desktop) -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm">
+            <!-- Encabezado del Formulario -->
+            <div class="p-6 border-b border-slate-800/80 bg-slate-900 flex items-center justify-between">
+              <div>
+                <h2 class="text-lg sm:text-xl font-bold text-white flex items-center space-x-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span>Nueva Reserva de Laboratorio</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Completa los campos para reservar tu turno en el sistema.</p>
+              </div>
+              <span class="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 font-mono font-medium border border-emerald-500/20">
+                PostgreSQL DDL
+              </span>
+            </div>
+
+            <!-- Formulario Reactivo -->
+            <form id="form-reserva" novalidate class="p-6 sm:p-8 space-y-5">
+              
+              <!-- Campo 1: Nombre del Estudiante -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <label for="estudiante" class="text-xs sm:text-sm font-medium text-slate-200 flex items-center space-x-1">
+                    <span>Nombre del Estudiante</span>
+                    <span class="text-emerald-400 font-bold">*</span>
+                  </label>
+                  <span class="text-[11px] text-slate-500">Mínimo 3 letras</span>
+                </div>
+                <div class="relative rounded-xl shadow-sm">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    id="estudiante"
+                    name="estudiante"
+                    placeholder="Ej. Ana Sofía Morales Gómez"
+                    autocomplete="name"
+                    class="block w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+                <!-- Mensaje de error dinámico en el DOM -->
+                <div id="error-estudiante" class="hidden text-xs text-rose-400 flex items-center space-x-1.5 pt-1">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="error-text"></span>
+                </div>
+              </div>
+
+              <!-- Campo 2: Código Estudiantil (Validación estricta de 9 dígitos) -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <label for="codigo" class="text-xs sm:text-sm font-medium text-slate-200 flex items-center space-x-1">
+                    <span>Código Estudiantil</span>
+                    <span class="text-emerald-400 font-bold">*</span>
+                  </label>
+                  <span id="codigo-counter" class="text-[11px] font-mono text-slate-500">
+                    0/9 dígitos
+                  </span>
+                </div>
+                <div class="relative rounded-xl shadow-sm">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    id="codigo"
+                    name="codigo"
+                    maxlength="9"
+                    inputmode="numeric"
+                    placeholder="202610482"
+                    class="block w-full pl-11 pr-4 py-3 font-mono tracking-wider bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+                <p class="text-[11px] text-slate-500">Debe contener exactamente 9 dígitos numéricos (ej. 202610482).</p>
+                <!-- Mensaje de error dinámico en el DOM -->
+                <div id="error-codigo" class="hidden text-xs text-rose-400 flex items-center space-x-1.5 pt-1">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="error-text"></span>
+                </div>
+              </div>
+
+              <!-- Campo 3: Selección de Laboratorio -->
+              <div class="space-y-1.5">
+                <label for="laboratorio" class="text-xs sm:text-sm font-medium text-slate-200 flex items-center space-x-1">
+                  <span>Laboratorio de Sistemas</span>
+                  <span class="text-emerald-400 font-bold">*</span>
+                </label>
+                <div class="relative rounded-xl shadow-sm">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <select
+                    id="laboratorio"
+                    name="laboratorio"
+                    class="block w-full pl-11 pr-10 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled selected>Selecciona un laboratorio de cómputo...</option>
+                    <option value="Lab 101 - Redes y Servidores (Cisco)">Lab 101 - Redes y Servidores (Cisco)</option>
+                    <option value="Lab 102 - Desarrollo de Software y BD">Lab 102 - Desarrollo de Software y BD</option>
+                    <option value="Lab 103 - Inteligencia Artificial y Big Data">Lab 103 - Inteligencia Artificial y Big Data</option>
+                    <option value="Lab 104 - Ciberseguridad y Sistemas Distribuidos">Lab 104 - Ciberseguridad y Sistemas Distribuidos</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                <!-- Mensaje de error dinámico en el DOM -->
+                <div id="error-laboratorio" class="hidden text-xs text-rose-400 flex items-center space-x-1.5 pt-1">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="error-text"></span>
+                </div>
+              </div>
+
+              <!-- Fila con 2 columnas para Fecha y Hora -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Campo 4: Fecha de Reserva -->
+                <div class="space-y-1.5">
+                  <label for="fecha_reserva" class="text-xs sm:text-sm font-medium text-slate-200 flex items-center space-x-1">
+                    <span>Fecha del Turno</span>
+                    <span class="text-emerald-400 font-bold">*</span>
+                  </label>
+                  <div class="relative rounded-xl shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="date"
+                      id="fecha_reserva"
+                      name="fecha_reserva"
+                      class="block w-full pl-11 pr-3 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 transition-all cursor-pointer"
+                    />
+                  </div>
+                  <!-- Mensaje de error dinámico en el DOM -->
+                  <div id="error-fecha" class="hidden text-xs text-rose-400 flex items-center space-x-1.5 pt-1">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="error-text"></span>
+                  </div>
+                </div>
+
+                <!-- Campo 5: Hora de Inicio -->
+                <div class="space-y-1.5">
+                  <label for="hora_inicio" class="text-xs sm:text-sm font-medium text-slate-200 flex items-center space-x-1">
+                    <span>Hora de Inicio</span>
+                    <span class="text-emerald-400 font-bold">*</span>
+                  </label>
+                  <div class="relative rounded-xl shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <select
+                      id="hora_inicio"
+                      name="hora_inicio"
+                      class="block w-full pl-11 pr-10 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="" disabled selected>Elegir turno...</option>
+                      <option value="07:00:00">07:00 AM (Bloque 1)</option>
+                      <option value="08:30:00">08:30 AM (Bloque 2)</option>
+                      <option value="10:00:00">10:00 AM (Bloque 3)</option>
+                      <option value="11:30:00">11:30 AM (Bloque 4)</option>
+                      <option value="13:00:00">01:00 PM (Bloque 5)</option>
+                      <option value="14:30:00">02:30 PM (Bloque 6)</option>
+                      <option value="16:00:00">04:00 PM (Bloque 7)</option>
+                      <option value="17:30:00">05:30 PM (Bloque 8)</option>
+                      <option value="19:00:00">07:00 PM (Bloque 9)</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <!-- Mensaje de error dinámico en el DOM -->
+                  <div id="error-hora" class="hidden text-xs text-rose-400 flex items-center space-x-1.5 pt-1">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="error-text"></span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Botón de Envío Transaccional -->
+              <div class="pt-2">
+                <button
+                  type="submit"
+                  id="btn-submit"
+                  class="w-full flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl font-semibold text-slate-950 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400 hover:from-emerald-300 hover:to-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 shadow-lg shadow-emerald-500/25 transition-all transform active:scale-[0.99] cursor-pointer"
+                >
+                  <svg id="submit-spinner" class="hidden animate-spin -ml-1 mr-2 h-5 w-5 text-slate-950" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span id="submit-text">Registrar Turno en PostgreSQL</span>
+                  <svg id="submit-arrow" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="text-center">
+                <p class="text-[11px] text-slate-400">
+                  <span class="text-emerald-400">Seguridad RLS activa:</span> Tu transacción se registra bajo la tabla <code class="font-mono text-slate-300">reservas_laboratorio</code>.
+                </p>
+              </div>
+            </form>
+          </div>
+
+          <!-- Comprobante / Ticket de Confirmación Dinámico (Aparece tras registro exitoso) -->
+          <div id="voucher-card" class="hidden bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-500">
+            <div class="absolute -right-16 -top-16 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="flex items-center space-x-3 text-emerald-400 mb-4">
+              <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                <svg class="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">¡Reserva Guardada Exitosamente!</h3>
+                <p class="text-xs text-emerald-400/90">Registro transaccional confirmado en base de datos.</p>
+              </div>
+            </div>
+
+            <!-- Resumen del Ticket -->
+            <div class="bg-slate-950/80 rounded-xl p-4 sm:p-5 border border-slate-800 space-y-3 font-mono text-xs">
+              <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <span class="text-slate-400">ID Reserva:</span>
+                <span id="voucher-id" class="text-emerald-400 font-bold truncate max-w-[200px]">#000000</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <span class="text-slate-400">Estudiante:</span>
+                <span id="voucher-estudiante" class="text-slate-100 font-sans font-semibold">---</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <span class="text-slate-400">Código (9 dígitos):</span>
+                <span id="voucher-codigo" class="text-slate-200">---</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <span class="text-slate-400">Laboratorio:</span>
+                <span id="voucher-laboratorio" class="text-emerald-300 font-sans">---</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                <span class="text-slate-400">Fecha y Hora:</span>
+                <span id="voucher-horario" class="text-slate-200">---</span>
+              </div>
+              <div class="flex justify-between items-center pt-1">
+                <span class="text-slate-500">Timestamp de inserción:</span>
+                <span id="voucher-timestamp" class="text-slate-400 text-[10px]">---</span>
+              </div>
+            </div>
+
+            <div class="mt-5 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                id="btn-print-voucher"
+                class="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center space-x-2"
+              >
+                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span>Imprimir / Descargar Comprobante</span>
+              </button>
+              <button
+                type="button"
+                id="btn-new-reservation"
+                class="py-2.5 px-4 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition flex items-center justify-center space-x-1"
+              >
+                <span>Nueva Reserva</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COLUMNA 2: MONITOR DE TURNOS EN TIEMPO REAL (5 cols en desktop) -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm">
+            <!-- Header Monitor -->
+            <div class="p-6 border-b border-slate-800/80 bg-slate-900 flex items-center justify-between">
+              <div>
+                <h3 class="text-base sm:text-lg font-bold text-white flex items-center space-x-2">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Turnos en Tiempo Real</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Sincronizado con Supabase / PostgreSQL</p>
+              </div>
+              <button
+                id="btn-refresh"
+                title="Actualizar lista de reservas"
+                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700/80 transition"
+              >
+                <svg id="refresh-icon" class="w-4 h-4 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Filtros Rápidos -->
+            <div class="p-4 bg-slate-950/60 border-b border-slate-800/80 space-y-3">
+              <!-- Búsqueda por código de 9 dígitos o nombre -->
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  id="search-input"
+                  placeholder="Buscar por código (9 dígitos) o nombre..."
+                  class="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              <!-- Filtro por Laboratorio -->
+              <select
+                id="filter-lab"
+                class="block w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="">Todos los laboratorios</option>
+                <option value="Lab 101">Lab 101 - Redes y Servidores</option>
+                <option value="Lab 102">Lab 102 - Desarrollo Software</option>
+                <option value="Lab 103">Lab 103 - Inteligencia Artificial</option>
+                <option value="Lab 104">Lab 104 - Ciberseguridad</option>
+              </select>
+            </div>
+
+            <!-- Contenedor Lista de Turnos -->
+            <div id="reservas-list" class="divide-y divide-slate-800/80 max-h-[520px] overflow-y-auto p-4 space-y-3">
+              <!-- Cargando placeholders... -->
+              <div class="text-center py-10 space-y-3">
+                <div class="inline-block animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                <p class="text-xs text-slate-400">Consultando tabla <code class="font-mono text-emerald-400">reservas_laboratorio</code>...</p>
+              </div>
+            </div>
+
+            <!-- Footer con estadísticas del turno -->
+            <div class="p-4 bg-slate-950/80 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+              <span id="counter-total">Total reservas: <strong class="text-emerald-400 font-mono">0</strong></span>
+              <span class="text-[11px] text-slate-500">Ordenado por fecha desc</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta de Referencia de Laboratorios -->
+          <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-3">
+            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Normativa de Turnos</span>
+            </h4>
+            <ul class="text-xs text-slate-400 space-y-2 list-disc list-inside">
+              <li>El código de estudiante debe coincidir con el carnet universitario (9 dígitos).</li>
+              <li>Presentarse al laboratorio 5 minutos antes del horario indicado.</li>
+              <li>Máximo 1 turno activo por día por estudiante para garantizar cupos.</li>
+              <li>Se cancelará automáticamente la reserva con 15 min de retraso.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer Institucional -->
+    <footer class="mt-auto border-t border-slate-800/80 bg-slate-950/90 py-6">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Sistema Transaccional de Turnos de Laboratorio &bull; Full-Stack PostgreSQL & Supabase</span>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button id="footer-ddl-btn" class="text-slate-400 hover:text-emerald-400 transition">Ver Esquema DDL</button>
+          <span>&bull;</span>
+          <span class="font-mono text-slate-500">v1.2.0-prod</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: SCRIPT DDL POSTGRESQL (Requisito 1) -->
+    <!-- ========================================================================= -->
+    <div id="modal-ddl" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        <!-- Header Modal -->
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Script DDL PostgreSQL &mdash; 'reservas_laboratorio'</h3>
+              <p class="text-xs text-slate-400">Ejecútalo directamente en el SQL Editor de tu proyecto Supabase</p>
+            </div>
+          </div>
+          <button id="btn-close-ddl" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Contenido SQL con Syntax highlighting styling -->
+        <div class="p-5 overflow-y-auto font-mono text-xs text-slate-300 bg-slate-950/90 leading-relaxed select-all">
+          <pre id="ddl-code-content"><code class="language-sql">-- ==============================================================================
+-- DDL POSTGRESQL PARA SUPABASE: GESTIÓN DE TURNOS DE LABORATORIOS DE SISTEMAS
+-- ==============================================================================
+-- Tabla: reservas_laboratorio (id, estudiante, codigo, fecha_reserva, hora_inicio, creado_en)
+-- ==============================================================================
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS public.reservas_laboratorio (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    estudiante VARCHAR(150) NOT NULL,
+    codigo VARCHAR(9) NOT NULL,
+    laboratorio VARCHAR(100) NOT NULL,
+    fecha_reserva DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+
+    -- Restricción: Código de exactamente 9 dígitos numéricos
+    CONSTRAINT check_codigo_estudiantil_9_digitos 
+        CHECK (codigo ~ '^[0-9]{9}$'),
+
+    -- Restricción: Fecha de reserva no puede ser en el pasado
+    CONSTRAINT check_fecha_reserva_valida 
+        CHECK (fecha_reserva >= CURRENT_DATE),
+
+    -- Restricción: No se permite duplicar laboratorio, fecha y hora de inicio
+    CONSTRAINT uq_reserva_laboratorio_fecha_hora 
+        UNIQUE (laboratorio, fecha_reserva, hora_inicio)
+);
+
+-- Índices de búsqueda
+CREATE INDEX IF NOT EXISTS idx_reservas_lab_fecha_hora 
+    ON public.reservas_laboratorio (laboratorio, fecha_reserva, hora_inicio);
+
+CREATE INDEX IF NOT EXISTS idx_reservas_codigo_estudiante 
+    ON public.reservas_laboratorio (codigo);
+
+-- Seguridad a Nivel de Filas (Row Level Security)
+ALTER TABLE public.reservas_laboratorio ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Lectura pública de reservas de laboratorio"
+    ON public.reservas_laboratorio FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+CREATE POLICY "Inserción permitida para estudiantes anónimos o autenticados"
+    ON public.reservas_laboratorio FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (
+        length(trim(estudiante)) >= 3
+        AND codigo ~ '^[0-9]{9}$'
+        AND fecha_reserva >= CURRENT_DATE
+    );</code></pre>
+        </div>
+
+        <!-- Footer Modal con Botón Copiar -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
+          <span class="text-xs text-slate-400">Tabla: <strong class="text-emerald-400 font-mono">public.reservas_laboratorio</strong></span>
+          <div class="flex items-center space-x-2">
+            <button
+              id="btn-copy-ddl"
+              type="button"
+              class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition flex items-center space-x-1.5 shadow-md shadow-emerald-500/20"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              <span id="copy-ddl-text">Copiar Script SQL</span>
+            </button>
+            <button id="btn-close-ddl-2" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: CONFIGURACIÓN DE CREDENCIALES SUPABASE -->
+    <!-- ========================================================================= -->
+    <div id="modal-config" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full flex flex-col shadow-2xl overflow-hidden">
+        
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Configuración de Supabase</h3>
+              <p class="text-xs text-slate-400">Variables de entorno declaradas para cliente SDK</p>
+            </div>
+          </div>
+          <button id="btn-close-config" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="form-config-supabase" class="p-5 space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-300">SUPABASE_URL</label>
+            <input
+              type="url"
+              id="input-supabase-url"
+              placeholder="https://your-project.supabase.co"
+              class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-300">SUPABASE_KEY (anon public)</label>
+            <input
+              type="text"
+              id="input-supabase-key"
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+            <p class="text-emerald-400 font-semibold">ℹ️ Modo Híbrido Automático:</p>
+            <p>Si las constantes son de demostración o no se puede conectar a Supabase, el sistema opera con almacenamiento local y simulador transaccional para que el flujo de turnos nunca falle.</p>
+          </div>
+
+          <div class="flex items-center justify-end space-x-2 pt-2">
+            <button
+              type="button"
+              id="btn-reset-demo"
+              class="px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800"
+            >
+              Restablecer Valores
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950"
+            >
+              Guardar y Reconectar
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCRIPT PRINCIPAL: VANILLA JS + SUPABASE SDK INTEGRATION (Requisitos 3 y 4) -->
+    <!-- ========================================================================= -->
+    <script>
+      /**
+       * =======================================================================
+       * CONSTANTES DECLARADAS DE SUPABASE (Requisito 3)
+       * =======================================================================
+       */
+      const DEFAULT_SUPABASE_URL = 'https://xyzcompany.supabase.co';
+      const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5emNvbXBhbnkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDAwMDAwMDAwfQ.example_signature';
+
+      // Recuperar credenciales si el usuario las configuró en el navegador, o usar las declaradas
+      let SUPABASE_URL = localStorage.getItem('LAB_SUPABASE_URL') || DEFAULT_SUPABASE_URL;
+      let SUPABASE_KEY = localStorage.getItem('LAB_SUPABASE_KEY') || DEFAULT_SUPABASE_KEY;
+
+      // Inicialización del cliente Supabase mediante CDN
+      let supabaseClient = null;
+      let isLiveSupabaseConnected = false;
+
+      // Base de datos de reserva local (Fallback para demostración fluida cuando la URL de Supabase es placeholder)
+      const LOCAL_STORAGE_KEY = 'lab_reservas_locales_v1';
+      const SEED_DATA = [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          estudiante: 'Carlos Eduardo Ramírez',
+          codigo: '202410892',
+          laboratorio: 'Lab 101 - Redes y Servidores (Cisco)',
+          fecha_reserva: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          hora_inicio: '08:30:00',
+          creado_en: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: '550e8400-e29b-41d4-a716-446655440002',
+          estudiante: 'María Fernanda Quispe',
+          codigo: '202319401',
+          laboratorio: 'Lab 103 - Inteligencia Artificial y Big Data',
+          fecha_reserva: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          hora_inicio: '10:00:00',
+          creado_en: new Date(Date.now() - 7200000).toISOString()
+        },
+        {
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          estudiante: 'Alejandro Torres Valdivia',
+          codigo: '202511034',
+          laboratorio: 'Lab 102 - Desarrollo de Software y BD',
+          fecha_reserva: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+          hora_inicio: '14:30:00',
+          creado_en: new Date(Date.now() - 14400000).toISOString()
+        }
+      ];
+
+      function getLocalReservas() {
+        try {
+          const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (!raw) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SEED_DATA));
+            return SEED_DATA;
+          }
+          return JSON.parse(raw);
+        } catch (e) {
+          return SEED_DATA;
+        }
+      }
+
+      function saveLocalReserva(reserva) {
+        const current = getLocalReservas();
+        current.unshift(reserva);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(current));
+        return reserva;
+      }
+
+      // Inicializar el cliente Supabase
+      function initSupabase() {
+        try {
+          if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            // Si la URL contiene el placeholder 'xyzcompany', se marca como modo demo local
+            if (SUPABASE_URL.includes('xyzcompany') || SUPABASE_KEY.includes('example_signature')) {
+              isLiveSupabaseConnected = false;
+              updateStatusPill(false, 'Modo Demo (Local)');
+            } else {
+              isLiveSupabaseConnected = true;
+              updateStatusPill(true, 'Supabase Activo');
+            }
+          } else {
+            isLiveSupabaseConnected = false;
+            updateStatusPill(false, 'Modo Offline');
+          }
+        } catch (err) {
+          console.warn('Error al iniciar Supabase:', err);
+          isLiveSupabaseConnected = false;
+          updateStatusPill(false, 'Modo Demo (Local)');
+        }
+      }
+
+      function updateStatusPill(isLive, label) {
+        const pill = document.getElementById('status-pill');
+        const text = document.getElementById('status-text');
+        if (!pill || !text) return;
+
+        text.textContent = label;
+        if (isLive) {
+          pill.className = 'inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
+          pill.querySelector('span:first-child').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        } else {
+          pill.className = 'inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30';
+          pill.querySelector('span:first-child').className = 'w-2 h-2 rounded-full bg-amber-400';
+        }
+      }
+
+      // =========================================================================
+      // GESTIÓN DE ERRORES Y ALERTAS DINÁMICAS EN EL DOM (¡Sin usar alert()!)
+      // =========================================================================
+
+      function showDOMAlert(message, type = 'success', durationMs = 6000) {
+        const container = document.getElementById('global-alert-container');
+        if (!container) return;
+
+        const alertId = 'alert-' + Date.now();
+        const alertEl = document.createElement('div');
+        
+        let borderClass = 'border-emerald-500/40 bg-emerald-950/60 text-emerald-200';
+        let iconSvg = `
+          <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        `;
+
+        if (type === 'error') {
+          borderClass = 'border-rose-500/40 bg-rose-950/60 text-rose-200';
+          iconSvg = `
+            <svg class="w-5 h-5 text-rose-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          `;
+        } else if (type === 'warning') {
+          borderClass = 'border-amber-500/40 bg-amber-950/60 text-amber-200';
+          iconSvg = `
+            <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          `;
+        }
+
+        alertEl.id = alertId;
+        alertEl.className = `flex items-center justify-between p-4 rounded-xl border backdrop-blur-md shadow-lg transition-all duration-300 transform translate-y-0 opacity-100 ${borderClass}`;
+        alertEl.innerHTML = `
+          <div class="flex items-center space-x-3">
+            ${iconSvg}
+            <div class="text-xs sm:text-sm font-medium">${message}</div>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-white p-1 rounded-lg transition" onclick="document.getElementById('${alertId}')?.remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        `;
+
+        container.prepend(alertEl);
+
+        // Auto remoción
+        if (durationMs > 0) {
+          setTimeout(() => {
+            const el = document.getElementById(alertId);
+            if (el) {
+              el.classList.add('opacity-0', '-translate-y-2');
+              setTimeout(() => el.remove(), 300);
+            }
+          }, durationMs);
+        }
+      }
+
+      function setFieldError(fieldId, errorContainerId, errorMessage) {
+        const input = document.getElementById(fieldId);
+        const container = document.getElementById(errorContainerId);
+        if (!container) return;
+
+        if (errorMessage) {
+          container.querySelector('.error-text').textContent = errorMessage;
+          container.classList.remove('hidden');
+          if (input) {
+            input.classList.add('border-rose-500', 'focus:ring-rose-500');
+            input.classList.remove('border-slate-700/80', 'focus:ring-emerald-500/60');
+          }
+        } else {
+          container.classList.add('hidden');
+          if (input) {
+            input.classList.remove('border-rose-500', 'focus:ring-rose-500');
+            input.classList.add('border-slate-700/80', 'focus:ring-emerald-500/60');
+          }
+        }
+      }
+
+      function clearAllFieldErrors() {
+        setFieldError('estudiante', 'error-estudiante', null);
+        setFieldError('codigo', 'error-codigo', null);
+        setFieldError('laboratorio', 'error-laboratorio', null);
+        setFieldError('fecha_reserva', 'error-fecha', null);
+        setFieldError('hora_inicio', 'error-hora', null);
+      }
+
+      // =========================================================================
+      // CARGAR Y RENDERIZAR RESERVAS EN TIEMPO REAL
+      // =========================================================================
+
+      async function fetchReservas() {
+        const listContainer = document.getElementById('reservas-list');
+        const refreshIcon = document.getElementById('refresh-icon');
+        if (refreshIcon) refreshIcon.classList.add('rotate-180');
+
+        let reservas = [];
+
+        try {
+          if (isLiveSupabaseConnected && supabaseClient) {
+            // Consulta real a Supabase PostgreSQL
+            const { data, error } = await supabaseClient
+              .from('reservas_laboratorio')
+              .select('*')
+              .order('fecha_reserva', { ascending: false })
+              .order('hora_inicio', { ascending: false })
+              .limit(50);
+
+            if (error) {
+              console.warn('Error en consulta Supabase, usando local:', error.message);
+              reservas = getLocalReservas();
+            } else {
+              reservas = data || [];
+            }
+          } else {
+            // Uso de fallback local
+            reservas = getLocalReservas();
+          }
+        } catch (err) {
+          console.error('Error al obtener reservas:', err);
+          reservas = getLocalReservas();
+        } finally {
+          if (refreshIcon) {
+            setTimeout(() => refreshIcon.classList.remove('rotate-180'), 400);
+          }
+        }
+
+        renderReservasUI(reservas);
+      }
+
+      function renderReservasUI(reservas) {
+        const listContainer = document.getElementById('reservas-list');
+        const counterEl = document.getElementById('counter-total');
+        const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+        const labVal = document.getElementById('filter-lab')?.value || '';
+
+        // Filtrado en vivo por código (9 dígitos) o nombre, y laboratorio
+        const filtered = reservas.filter(item => {
+          const matchSearch = !searchVal || 
+            (item.codigo && item.codigo.toLowerCase().includes(searchVal)) ||
+            (item.estudiante && item.estudiante.toLowerCase().includes(searchVal));
+          
+          const matchLab = !labVal || (item.laboratorio && item.laboratorio.includes(labVal));
+          return matchSearch && matchLab;
+        });
+
+        if (counterEl) {
+          counterEl.innerHTML = `Total reservas: <strong class="text-emerald-400 font-mono">${filtered.length}</strong>`;
+        }
+
+        if (filtered.length === 0) {
+          listContainer.innerHTML = `
+            <div class="text-center py-10 px-4 text-slate-500 space-y-2">
+              <svg class="w-8 h-8 mx-auto text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <p class="text-xs font-medium">No se encontraron reservas con los filtros actuales.</p>
+            </div>
+          `;
+          return;
+        }
+
+        listContainer.innerHTML = filtered.map(item => {
+          // Formateo de fecha y hora
+          const fechaFormateada = item.fecha_reserva ? item.fecha_reserva : 'N/A';
+          const horaFormateada = item.hora_inicio ? item.hora_inicio.slice(0, 5) : 'N/A';
+          const idShort = item.id ? item.id.substring(0, 8) : '---';
+
+          return `
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/90 hover:border-emerald-500/40 transition group">
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-1">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold text-white group-hover:text-emerald-300 transition">${escapeHTML(item.estudiante)}</span>
+                    <span class="font-mono text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
+                      ${escapeHTML(item.codigo)}
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span>${escapeHTML(item.laboratorio || 'Laboratorio Central')}</span>
+                  </p>
+                </div>
+                
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                  Confirmado
+                </span>
+              </div>
+
+              <div class="mt-2.5 pt-2 border-t border-slate-900 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <div class="flex items-center space-x-3">
+                  <span class="flex items-center space-x-1 text-slate-300">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>${fechaFormateada}</span>
+                  </span>
+                  <span class="flex items-center space-x-1 text-emerald-400 font-semibold">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>${horaFormateada}</span>
+                  </span>
+                </div>
+                <span class="text-slate-500 text-[10px]">#${idShort}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function escapeHTML(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // =========================================================================
+      // MANIPULACIÓN DEL EVENTO SUBMIT (Requisito 4: e.preventDefault() & 9 dígitos)
+      // =========================================================================
+
+      function setupFormListener() {
+        const form = document.getElementById('form-reserva');
+        const codigoInput = document.getElementById('codigo');
+        const counterEl = document.getElementById('codigo-counter');
+        const fechaInput = document.getElementById('fecha_reserva');
+
+        // Configurar fecha mínima como HOY en el selector de fecha
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (fechaInput) {
+          fechaInput.min = todayStr;
+          // Predeterminar para hoy o mañana
+          fechaInput.value = todayStr;
+        }
+
+        // Contador en tiempo real del código de 9 dígitos y filtro de solo números
+        if (codigoInput && counterEl) {
+          codigoInput.addEventListener('input', (e) => {
+            // Permitir solo números
+            const sanitized = e.target.value.replace(/\D/g, '');
+            e.target.value = sanitized;
+            
+            const len = sanitized.length;
+            counterEl.textContent = `${len}/9 dígitos`;
+            
+            if (len === 9) {
+              counterEl.className = 'text-[11px] font-mono text-emerald-400 font-bold';
+              setFieldError('codigo', 'error-codigo', null);
+            } else {
+              counterEl.className = 'text-[11px] font-mono text-slate-500';
+            }
+          });
+        }
+
+        // Validación y Envío del Formulario
+        form.addEventListener('submit', async function (e) {
+          // 1. Prevenir recarga nativa de la página
+          e.preventDefault();
+
+          clearAllFieldErrors();
+
+          // Capturar valores de los campos del formulario
+          const estudiante = (document.getElementById('estudiante')?.value || '').trim();
+          const codigo = (document.getElementById('codigo')?.value || '').trim();
+          const laboratorio = (document.getElementById('laboratorio')?.value || '').trim();
+          const fecha_reserva = (document.getElementById('fecha_reserva')?.value || '').trim();
+          const hora_inicio = (document.getElementById('hora_inicio')?.value || '').trim();
+
+          let hasErrors = false;
+
+          // Validación 1: Nombre del Estudiante
+          if (!estudiante) {
+            setFieldError('estudiante', 'error-estudiante', 'Por favor ingresa el nombre completo del estudiante.');
+            hasErrors = true;
+          } else if (estudiante.length < 3) {
+            setFieldError('estudiante', 'error-estudiante', 'El nombre debe contener al menos 3 caracteres.');
+            hasErrors = true;
+          }
+
+          // Validación 2: Código Estudiantil (EXACTAMENTE 9 DÍGITOS NUMÉRICOS)
+          const regex9Digitos = /^[0-9]{9}$/;
+          if (!codigo) {
+            setFieldError('codigo', 'error-codigo', 'El código estudiantil es obligatorio.');
+            hasErrors = true;
+          } else if (!regex9Digitos.test(codigo)) {
+            setFieldError('codigo', 'error-codigo', `El código debe tener exactamente 9 dígitos numéricos (actual: ${codigo.length}).`);
+            hasErrors = true;
+          }
+
+          // Validación 3: Laboratorio
+          if (!laboratorio) {
+            setFieldError('laboratorio', 'error-laboratorio', 'Debes seleccionar un laboratorio de sistemas.');
+            hasErrors = true;
+          }
+
+          // Validación 4: Fecha de Reserva
+          if (!fecha_reserva) {
+            setFieldError('fecha_reserva', 'error-fecha', 'Selecciona la fecha para el turno.');
+            hasErrors = true;
+          } else if (fecha_reserva < todayStr) {
+            setFieldError('fecha_reserva', 'error-fecha', 'No puedes reservar en una fecha que ya pasó.');
+            hasErrors = true;
+          }
+
+          // Validación 5: Hora de Inicio
+          if (!hora_inicio) {
+            setFieldError('hora_inicio', 'error-hora', 'Selecciona el bloque horario deseado.');
+            hasErrors = true;
+          }
+
+          // Si existen errores, mostrar alerta dinámica en el DOM (¡Sin usar alert()!)
+          if (hasErrors) {
+            showDOMAlert('Por favor corrige los campos señalados en rojo antes de continuar.', 'error');
+            // Hacer foco en el primer campo con error
+            const firstErrorField = document.querySelector('.border-rose-500');
+            if (firstErrorField) firstErrorField.focus();
+            return;
+          }
+
+          // Validación de conflicto de turno (Mismo laboratorio, fecha y hora)
+          const reservasActuales = getLocalReservas();
+          const conflicto = reservasActuales.find(r => 
+            r.laboratorio === laboratorio && 
+            r.fecha_reserva === fecha_reserva && 
+            r.hora_inicio.slice(0, 5) === hora_inicio.slice(0, 5)
+          );
+
+          if (conflicto) {
+            setFieldError('hora_inicio', 'error-hora', 'Este laboratorio ya se encuentra reservado en el horario elegido.');
+            showDOMAlert(`Conflicto de turno: El ${laboratorio} ya está ocupado el ${fecha_reserva} a las ${hora_inicio.slice(0, 5)}. Elige otro horario.`, 'warning');
+            return;
+          }
+
+          // =====================================================================
+          // INSERCIÓN TRANSACCIONAL (SUPABASE / POSTGRESQL O FALLBACK LOCAL)
+          // =====================================================================
+          const btnSubmit = document.getElementById('btn-submit');
+          const spinner = document.getElementById('submit-spinner');
+          const submitText = document.getElementById('submit-text');
+          const submitArrow = document.getElementById('submit-arrow');
+
+          // Estado visual de carga
+          btnSubmit.disabled = true;
+          spinner.classList.remove('hidden');
+          submitArrow.classList.add('hidden');
+          submitText.textContent = 'Guardando en Base de Datos...';
+
+          const nuevaReserva = {
+            id: crypto.randomUUID ? crypto.randomUUID() : ('res-' + Date.now()),
+            estudiante,
+            codigo,
+            laboratorio,
+            fecha_reserva,
+            hora_inicio,
+            creado_en: new Date().toISOString()
+          };
+
+          try {
+            let resultadoFinal = null;
+
+            if (isLiveSupabaseConnected && supabaseClient) {
+              // Inserción en tiempo real en la tabla 'reservas_laboratorio'
+              const { data, error } = await supabaseClient
+                .from('reservas_laboratorio')
+                .insert([
+                  {
+                    estudiante: nuevaReserva.estudiante,
+                    codigo: nuevaReserva.codigo,
+                    laboratorio: nuevaReserva.laboratorio,
+                    fecha_reserva: nuevaReserva.fecha_reserva,
+                    hora_inicio: nuevaReserva.hora_inicio
+                  }
+                ])
+                .select();
+
+              if (error) {
+                throw new Error(error.message);
+              }
+
+              resultadoFinal = data && data[0] ? data[0] : nuevaReserva;
+              // Guardar también localmente para sincronización instantánea
+              saveLocalReserva(resultadoFinal);
+            } else {
+              // Simulación con almacenamiento local y retraso de red de 400ms
+              await new Promise(r => setTimeout(r, 450));
+              resultadoFinal = saveLocalReserva(nuevaReserva);
+            }
+
+            // ÉXITO: Mostrar alerta dinámica en el DOM
+            showDOMAlert(`¡Reserva confirmada! Turno asignado para ${estudiante} (${codigo}) en ${laboratorio}.`, 'success');
+
+            // Renderizar ticket de confirmación
+            renderVoucher(resultadoFinal);
+
+            // Limpiar formulario
+            form.reset();
+            if (counterEl) counterEl.textContent = '0/9 dígitos';
+            if (fechaInput) fechaInput.value = todayStr;
+
+            // Recargar lista en tiempo real
+            await fetchReservas();
+
+          } catch (err) {
+            console.error('Error durante la inserción transaccional:', err);
+            showDOMAlert(`Error al guardar en PostgreSQL: ${err.message || 'Fallo de conexión'}. Intenta nuevamente.`, 'error');
+          } finally {
+            btnSubmit.disabled = false;
+            spinner.classList.add('hidden');
+            submitArrow.classList.remove('hidden');
+            submitText.textContent = 'Registrar Turno en PostgreSQL';
+          }
+        });
+      }
+
+      function renderVoucher(reserva) {
+        const voucherCard = document.getElementById('voucher-card');
+        if (!voucherCard) return;
+
+        document.getElementById('voucher-id').textContent = '#' + (reserva.id || 'N/A');
+        document.getElementById('voucher-estudiante').textContent = reserva.estudiante;
+        document.getElementById('voucher-codigo').textContent = reserva.codigo;
+        document.getElementById('voucher-laboratorio').textContent = reserva.laboratorio;
+        document.getElementById('voucher-horario').textContent = `${reserva.fecha_reserva} a las ${reserva.hora_inicio.slice(0, 5)}`;
+        document.getElementById('voucher-timestamp').textContent = new Date(reserva.creado_en || Date.now()).toLocaleString('es-ES');
+
+        voucherCard.classList.remove('hidden');
+        voucherCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // =========================================================================
+      // INTERACCIÓN DE MODALES Y BÚSQUEDA
+      // =========================================================================
+
+      function setupModals() {
+        // Modal DDL
+        const modalDDL = document.getElementById('modal-ddl');
+        const openDDLBtn = document.getElementById('btn-open-ddl');
+        const footerDDLBtn = document.getElementById('footer-ddl-btn');
+        const closeDDLBtn = document.getElementById('btn-close-ddl');
+        const closeDDLBtn2 = document.getElementById('btn-close-ddl-2');
+        const copyDDLBtn = document.getElementById('btn-copy-ddl');
+        const copyDDLText = document.getElementById('copy-ddl-text');
+
+        const openDDL = () => modalDDL?.classList.remove('hidden');
+        const closeDDL = () => modalDDL?.classList.add('hidden');
+
+        openDDLBtn?.addEventListener('click', openDDL);
+        footerDDLBtn?.addEventListener('click', openDDL);
+        closeDDLBtn?.addEventListener('click', closeDDL);
+        closeDDLBtn2?.addEventListener('click', closeDDL);
+
+        // Copiar SQL
+        copyDDLBtn?.addEventListener('click', async () => {
+          const code = document.getElementById('ddl-code-content')?.innerText || '';
+          try {
+            await navigator.clipboard.writeText(code);
+            copyDDLText.textContent = '¡Copiado al portapapeles!';
+            copyDDLBtn.classList.replace('bg-emerald-500', 'bg-emerald-600');
+            showDOMAlert('Script DDL copiado al portapapeles. Pégalo en el SQL Editor de Supabase.', 'success', 3500);
+            setTimeout(() => {
+              copyDDLText.textContent = 'Copiar Script SQL';
+              copyDDLBtn.classList.replace('bg-emerald-600', 'bg-emerald-500');
+            }, 2500);
+          } catch (err) {
+            showDOMAlert('No se pudo copiar automáticamente. Puedes seleccionar el texto y copiarlo manualmente.', 'warning');
+          }
+        });
+
+        // Modal Configuración
+        const modalConfig = document.getElementById('modal-config');
+        const openConfigBtn = document.getElementById('btn-open-config');
+        const closeConfigBtn = document.getElementById('btn-close-config');
+        const formConfig = document.getElementById('form-config-supabase');
+        const inputUrl = document.getElementById('input-supabase-url');
+        const inputKey = document.getElementById('input-supabase-key');
+        const resetDemoBtn = document.getElementById('btn-reset-demo');
+
+        const openConfig = () => {
+          if (inputUrl) inputUrl.value = SUPABASE_URL;
+          if (inputKey) inputKey.value = SUPABASE_KEY;
+          modalConfig?.classList.remove('hidden');
+        };
+        const closeConfig = () => modalConfig?.classList.add('hidden');
+
+        openConfigBtn?.addEventListener('click', openConfig);
+        closeConfigBtn?.addEventListener('click', closeConfig);
+
+        resetDemoBtn?.addEventListener('click', () => {
+          if (inputUrl) inputUrl.value = DEFAULT_SUPABASE_URL;
+          if (inputKey) inputKey.value = DEFAULT_SUPABASE_KEY;
+        });
+
+        formConfig?.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const newUrl = inputUrl.value.trim();
+          const newKey = inputKey.value.trim();
+          
+          if (!newUrl || !newKey) {
+            showDOMAlert('Debes ingresar la URL y la Key de Supabase.', 'error');
+            return;
+          }
+
+          SUPABASE_URL = newUrl;
+          SUPABASE_KEY = newKey;
+          localStorage.setItem('LAB_SUPABASE_URL', newUrl);
+          localStorage.setItem('LAB_SUPABASE_KEY', newKey);
+
+          initSupabase();
+          fetchReservas();
+          closeConfig();
+          showDOMAlert('Configuración de Supabase actualizada correctamente.', 'success');
+        });
+
+        // Cerrar modales con tecla Escape o clic fuera
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            closeDDL();
+            closeConfig();
+          }
+        });
+
+        modalDDL?.addEventListener('click', (e) => {
+          if (e.target === modalDDL) closeDDL();
+        });
+        modalConfig?.addEventListener('click', (e) => {
+          if (e.target === modalConfig) closeConfig();
+        });
+
+        // Botón Nueva Reserva desde el Comprobante
+        document.getElementById('btn-new-reservation')?.addEventListener('click', () => {
+          document.getElementById('voucher-card')?.classList.add('hidden');
+          document.getElementById('estudiante')?.focus();
+        });
+
+        // Botón Imprimir Comprobante
+        document.getElementById('btn-print-voucher')?.addEventListener('click', () => {
+          window.print();
+        });
+
+        // Búsqueda y Filtros
+        document.getElementById('search-input')?.addEventListener('input', () => {
+          fetchReservas();
+        });
+        document.getElementById('filter-lab')?.addEventListener('change', () => {
+          fetchReservas();
+        });
+        document.getElementById('btn-refresh')?.addEventListener('click', () => {
+          fetchReservas();
+        });
+      }
+
+      // =========================================================================
+      // INICIALIZACIÓN GENERAL AL CARGAR EL DOM
+      // =========================================================================
+      document.addEventListener('DOMContentLoaded', () => {
+        initSupabase();
+        setupFormListener();
+        setupModals();
+        fetchReservas();
+      });
+    </script>
+  </body>
+</html>
